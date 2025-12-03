@@ -1,10 +1,9 @@
 <?php
 namespace App\Http\Controllers;
+
 use App\Http\Controllers\Controller;
-
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use App\Models\Post; 
-
 
 class FinalizationController extends Controller
 {
@@ -12,27 +11,21 @@ class FinalizationController extends Controller
     {
         
         $tempPath = $request->session()->get('temp_image_path');
+        
+        $request->session()->forget(['show_image_metadata', 'temp_image_exif_data']);
 
         if ($tempPath) {
             
             $finalPath = 'post_images/' . basename($tempPath);
-
             
-            Storage::move($tempPath, $finalPath);
+            Storage::disk('local')->move($tempPath, $finalPath, 'public'); 
             
-           
             $request->session()->forget('temp_image_path');
-
             
-            $post = Post::create([
-                
-                'image_path' => $finalPath,
-            ]);
-
-            return redirect('/posts/' . $post->id)->with('success', 'Post saved!');
+            return redirect()
+                ->route('download.trigger')
+                ->with('download_path', $finalPath); 
         }
-        
-        
-        return back()->with('error', 'Image not found.');
+        return back()->with('error', 'Image path was lost from session or corrupted.');
     }
 }
